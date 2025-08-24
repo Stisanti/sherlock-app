@@ -1,0 +1,7 @@
+{
+  "appId": "it.sherlock.app",
+  "appName": "Sherlock",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "loggingBehavior": "production"
+}
