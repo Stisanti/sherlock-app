@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sherlock – Generatore PEC Rimborso (Standalone)</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 24px; }
+    .wrap { max-width: 980px; margin: 0 auto; }
+    h1 { font-size: 1.6rem; margin: 0 0 8px; }
+    h2 { font-size: 1.1rem; margin-top: 24px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row-1 { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    label { font-weight: 600; font-size: .92rem; }
+    input, textarea, select { width: 100%; padding: 10px; border: 1px solid #d0d7de; border-radius: 10px; }
+    textarea { min-height: 110px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 16px; padding: 16px; margin-top: 12px; background: #fafafa; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; border: 1px solid #1f2937; background: #111827; color: white; cursor: pointer; }
+    .btn.secondary { background: white; color: #111827; }
+    .muted { color: #6b7280; font-size: .85rem; }
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: .78rem; margin-left: 8px; }
+    .ok { background: #d1fae5; color: #065f46; }
+    .warn { background: #fef3c7; color: #92400e; }
+    .err { background: #fee2e2; color: #991b1b; }
+    pre { white-space: pre-wrap; max-height: 280px; overflow: auto; background: #fff; border: 1px solid #e5e7eb; padding: 10px; border-radius: 10px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Generatore PEC Rimborso (Standalone, nessun build)</h1>
+    <div class="muted">Funziona in qualsiasi browser: incolla polizza e sinistro, verifica copertura (demo) e genera il file <code>.eml</code> da inviare via PEC.</div>
+
+    <div class="card">
+      <h2>1) Polizza</h2>
+      <div class="row">
+        <div>
+          <label>Testo polizza (incolla o trascina un .txt)</label>
+          <textarea id="policyText" placeholder="Incolla qui il testo della polizza (da PDF/OCR)"></textarea>
+        </div>
+        <div>
+          <div class="row-1">
+            <div>
+              <label>Compagnia</label>
+              <input id="company" placeholder="es. Groupama" />
+            </div>
+            <div>
+              <label>Prodotto</label>
+              <input id="product" placeholder="es. Infortuni" />
+            </div>
+            <div>
+              <label>Numero polizza</label>
+              <input id="policyNumber" placeholder="es. ABC123/45" />
+            </div>
+            <div>
+              <label>Contraente</label>
+              <input id="holderName" placeholder="Nome Cognome" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2) Sinistro</h2>
+      <div class="row">
+        <div>
+          <label>Tipologia</label>
+          <input id="claimType" placeholder="Infortuni / RC / Casa / Malattia" value="Infortuni" />
+        </div>
+        <div>
+          <label>Data evento</label>
+          <input id="lossDate" type="date" />
+        </div>
+      </div>
+      <div class="row-1">
+        <div>
+          <label>Luogo</label>
+          <input id="place" placeholder="Indirizzo o città" />
+        </div>
+        <div>
+          <label>Descrizione sintetica</label>
+          <textarea id="description" placeholder="Descrivi in breve cosa è accaduto…"></textarea>
+        </div>
+        <div>
+          <label>Importo richiesto (opz.)</label>
+          <input id="amount" placeholder="es. 1.250,00 €" />
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <button class="btn" onclick="checkCoverage()">Verifica copertura (demo)</button>
+        <span id="covBadge" class="badge warn" style="display:none"></span>
+      </div>
+      <div id="covResult" class="muted" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <h2>3) Dati PEC</h2>
+      <div class="row">
+        <div>
+          <label>PEC compagnia (To)</label>
+          <input id="pecTo" value="protocollo@pec.compagnia.it" />
+        </div>
+        <div>
+          <label>PEC assicurato (Cc)</label>
+          <input id="pecCc" value="stefano.scapigliati@postecert.it" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Intestatario</label>
+          <input id="insuredName" value="Stefano Scapigliati" />
+        </div>
+        <div>
+          <label>Codice Fiscale</label>
+          <input id="fiscalCode" value="SCPSFN69S22H501U" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Indirizzo</label>
+          <input id="address" value="Lungotevere G.A. Thaon di Revel, 84 – 00196 Roma" />
+        </div>
+        <div>
+          <label>Telefono</label>
+          <input id="phone" value="3472696754" />
+        </div>
+      </div>
+      <div class="row-1">
+        <div>
+          <label>Email</label>
+          <input id="email" value="stefano.scapigliati@gmail.com" />
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <button id="genBtn" class="btn" onclick="generatePEC()" disabled>
+          Genera testo PEC (.eml)
+        </button>
+        <button class="btn secondary" onclick="copyOnlyText()">Copia solo testo</button>
+      </div>
+      <div style="margin-top:10px">
+        <div class="muted">Anteprima</div>
+        <pre id="preview"></pre>
+      </div>
+    </div>
+
+    <p class="muted">Disclaimer: la verifica copertura è dimostrativa e non sostituisce valutazioni legali/contrattuali.</p>
+  </div>
+
+  <script>
+    const lossDate = document.getElementById('lossDate');
+    lossDate.value = new Date().toISOString().slice(0,10);
+
+    function guessPolicyNumber(text) {
+      const m = (text||'').match(/polizza\s*(n\.?|numero)\s*[:#]?\s*([A-Z0-9\/-]{6,})/i);
+      return m ? m[2] : undefined;
+    }
+
+    function coverageEngine(policyText, descr) {
+      const t = (policyText||'').toLowerCase();
+      const d = (descr||'').toLowerCase();
+      const reasons = [];
+      const clauses = [];
+      let status = 'unknown';
+      const hasInf = /infortuni|invalidit[aà]|frattura|trauma/.test(t);
+      const hasMal = /malattia|ricovero|degenza/.test(t);
+      const hasCasa = /incendio|furto|danno|rc famiglia/.test(t);
+      const hasRC = /\brc\b|responsabilit[aà]\s+civile/.test(t);
+
+      if (/frattur|traum|cadut|infortun/.test(d) && hasInf) { status='covered'; reasons.push('Garanzia Infortuni pertinente.'); clauses.push('GAR_INFORTUNI'); }
+      else if (/malatt|ricover|intervento/.test(d) && hasMal) { status='covered'; reasons.push('Garanzia Malattia pertinente.'); clauses.push('GAR_MALATTIA'); }
+      else if (/furto|incendio|allagament|danno/.test(d) && hasCasa) { status='covered'; reasons.push('Garanzia Casa pertinente.'); clauses.push('GAR_CASA'); }
+      else if (/urto|tamponament|sinistro stradale/.test(d) && hasRC) { status='covered'; reasons.push('RC pertinente.'); clauses.push('GAR_RC'); }
+      else if (!t) { status='unknown'; reasons.push('Testo polizza non disponibile.'); }
+      else { status='not_covered'; reasons.push('Non emergono garanzie pertinenti.'); }
+
+      if (/esclusion[ei].*sport.*pericolosi/.test(t) && /arrampicat|paracadut|subacquea/.test(d)) {
+        status='not_covered'; reasons.push('Esclusione: sport pericolosi.'); clauses.push('ESCL_SPORT');
+      }
+      return { status, reasons, clauses };
+    }
+
+    function setBadge(status, reasons) {
+      const b = document.getElementById('covBadge');
+      if (!status) { b.style.display='none'; return; }
+      b.style.display='inline-block';
+      b.className = 'badge ' + (status==='covered' ? 'ok' : status==='not_covered' ? 'err' : 'warn');
+      b.textContent = status==='covered' ? 'Coperto' : status==='not_covered' ? 'Non coperto' : 'Incerto';
+      document.getElementById('covResult').innerText = (reasons||[]).join('\n');
+      document.getElementById('genBtn').disabled = status!=='covered';
+    }
+
+    function checkCoverage() {
+      const txt = document.getElementById('policyText').value;
+      const descr = document.getElementById('description').value;
+      const res = coverageEngine(txt, descr);
+      setBadge(res.status, res.reasons);
+    }
+
+    function buildPECDraft() {
+      const policyText = document.getElementById('policyText').value;
+      const refs = {
+        company: document.getElementById('company').value || undefined,
+        product: document.getElementById('product').value || undefined,
+        policyNumber: document.getElementById('policyNumber').value || guessPolicyNumber(policyText),
+        holderName: document.getElementById('holderName').value || undefined,
+      };
+      const claim = {
+        claimType: document.getElementById('claimType').value,
+        lossDate: document.getElementById('lossDate').value,
+        place: document.getElementById('place').value,
+        description: document.getElementById('description').value,
+        amount: document.getElementById('amount').value,
+      };
+      const opts = {
+        pecTo: document.getElementById('pecTo').value,
+        pecCc: document.getElementById('pecCc').value,
+        insuredName: document.getElementById('insuredName').value,
+        fiscalCode: document.getElementById('fiscalCode').value,
+        address: document.getElementById('address').value,
+        phone: document.getElementById('phone').value,
+        email: document.getElementById('email').value,
+      };
+
+      const policyNo = refs.policyNumber || '(numero polizza)';
+      const subject = `Richiesta rimborso/indennizzo – Polizza ${policyNo} – Sinistro del ${claim.lossDate}`;
+      const header = [opts.insuredName, opts.fiscalCode?`CF: ${opts.fiscalCode}`:undefined, opts.address, opts.phone?`Tel: ${opts.phone}`:undefined, opts.email?`Email: ${opts.email}`:undefined].filter(Boolean).join('\n');
+      const body =
+`Alla cortese attenzione dell'Ufficio Sinistri\n${opts.pecTo}\n\n` +
+`${header}\n\n` +
+`Oggetto: ${subject}\n\n` +
+`Il/La sottoscritto/a, in qualità di assicurato/beneficiario della polizza n. ${policyNo}${refs.company?` stipulata con ${refs.company}`:""}, comunica e richiede quanto segue.\n\n` +
+`1) **Denuncia/integrazione sinistro**\n` +
+`   - Data evento: ${claim.lossDate}\n` +
+`   - Luogo: ${claim.place || '(indicare)'}\n` +
+`   - Tipologia: ${claim.claimType}\n` +
+`   - Descrizione sintetica: ${claim.description}\n` +
+`${claim.amount?`   - Importo richiesto (provvisorio): ${claim.amount}\n`:""}` +
+`\n2) **Copertura**\n` +
+`   Dalla verifica delle condizioni di polizza (allegate/di cui si riporta estratto), l'evento risulta indennizzabile ai sensi delle relative garanzie e nei limiti di massimali e franchigie contrattuali.\n\n` +
+`3) **Documentazione allegata**\n` +
+`   - Copia della polizza e condizioni\n` +
+`   - Documentazione probatoria (ricevute/fatture/referti/foto)\n` +
+`   - Documento d'identità e codice fiscale\n` +
+`   - Eventuali ulteriori atti richiesti\n\n` +
+`4) **Richiesta**\n` +
+`   Si richiede la liquidazione dell'indennizzo/rimborso dovuto, o in subordine formale riscontro motivato, con indicazione di eventuali integrazioni necessarie.\n\n` +
+`5) **Recapiti e IBAN**\n` +
+`   Per comunicazioni e pagamento: ${opts.email || '(email)'} – ${opts.phone || '(telefono)'}.\n` +
+`   IBAN: (indicare).\n\n` +
+`Trattamento dati: i dati sono trasmessi ai sensi della normativa privacy applicabile per finalità di gestione del sinistro.\n\n` +
+`Distinti saluti.\n\n` +
+`${opts.insuredName}`;
+      return { to: opts.pecTo, cc: opts.pecCc, subject, body };
+    }
+
+    function pecToEML(pec) {
+      const headers = [
+        `To: ${pec.to}`,
+        pec.cc ? `Cc: ${pec.cc}` : undefined,
+        `Subject: ${pec.subject}`,
+        `Content-Type: text/plain; charset=utf-8`,
+      ].filter(Boolean).join('\n');
+      return `${headers}\n\n${pec.body}`;
+    }
+
+    function generatePEC() {
+      const badge = document.getElementById('covBadge');
+      if (!badge || !/Coperto/.test(badge.textContent||'')) {
+        alert('La PEC si abilita solo dopo verifica copertura positiva.');
+        return;
+      }
+      const pec = buildPECDraft();
+      const eml = pecToEML(pec);
+      const filename = `PEC_richiesta_rimborso_${new Date().toISOString().slice(0,10)}.eml`;
+      const blob = new Blob([eml], { type: 'message/rfc822;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      document.getElementById('preview').textContent = eml;
+    }
+
+    function copyOnlyText() {
+      const pec = buildPECDraft();
+      navigator.clipboard.writeText(pec.body);
+      const p = document.getElementById('preview');
+      p.textContent = pec.body + '\n\n(Copiato negli appunti)';
+    }
+
+    // drag & drop .txt nel textarea
+    const pt = document.getElementById('policyText');
+    pt.addEventListener('dragover', e => { e.preventDefault(); });
+    pt.addEventListener('drop', async e => {
+      e.preventDefault();
+      const f = e.dataTransfer.files?.[0];
+      if (!f) return;
+      const txt = await f.text();
+      pt.value = txt;
+    });
+  </script>
+</body>
+</html>
